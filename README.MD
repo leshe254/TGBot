@@ -1,0 +1,1 @@
+Telegram bot for school helpdesk. Also see projectinfo.txt

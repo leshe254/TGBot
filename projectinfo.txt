@@ -1,0 +1,10 @@
+Create TelegramBot, which help users on school work!
+
+1. Hello message (with nik) at "/start" command
+2. Then 4 buttons ( Appeal to: "administration", "administration of the electronic journal", "IT department", "supply manager")
+3. Message "the criticality of the problem" with 3 buttons
+4. Message "Input office number"
+5. Message "Describe the problem"
+6. Send message to ***
+
+support664_bot
