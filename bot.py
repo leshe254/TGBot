@@ -67,18 +67,18 @@ if __name__ == '__main__':
         exit(1)
     else:
          #Создаем клавиатуру для выбора отдела
-        depmarkup=telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        depmarkup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
         for department in departments: 
-            itemtmp=telebot.telebot.types.KeyboardButton(department)
+            itemtmp=telebot.types.KeyboardButton(department)
             depmarkup.add(itemtmp)
         #Создаем клавиатуру для выбора критичности
-        critmarkup = telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        critmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
         for critical in criticals: 
-                itemtmp=telebot.telebot.types.KeyboardButton(critical)
+                itemtmp=telebot.types.KeyboardButton(critical)
                 critmarkup.add(itemtmp)
         #Создаем клаву для "/start"
-        startmarkup = telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-        startbtn=telebot.telebot.types.KeyboardButton("/start")
+        startmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        startbtn=telebot.types.KeyboardButton("/start")
         startmarkup.add(startbtn)
         #Запуск бота
         bot.infinity_polling()
