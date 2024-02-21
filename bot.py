@@ -10,34 +10,41 @@ criticals = ["Жизненно-необходимо", "Средняя важно
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    user_first_name = str(message.chat.first_name)
+    #Никнейм, будет использоваться позже
     user_nik = str(message.from_user.username)
-    bot.send_message(message.chat.id, f"Здравствуйте, {user_first_name}!") #Приветствие собеседника!
-    
-    if(len(departments) > 0): #Проверяем количество элементов массива "отделы"
+    #Приветствие собеседника!
+    bot.send_message(message.chat.id, f"Здравствуйте, {str(message.chat.first_name)}!") 
+    #Проверяем количество элементов массива "отделы"
+    if(len(departments) > 0): 
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for i in range(len(departments)): #Для каждого элемента перечня создаем кнопку
-            itemtmp=types.KeyboardButton(departments[i])
+        #Для каждого элемента перечня создаем кнопку
+        for department in departments: 
+            itemtmp=types.KeyboardButton(department)
             markup.add(itemtmp)
     bot.send_message(message.chat.id,'Выберите к кому хотите обратиться',reply_markup=markup)
     bot.register_next_step_handler(message, critical_switch)
     
-    #Сценарий на все случаи жизни)))
+#Сценарий на все случаи жизни
 def critical_switch(message):
         dep = str(message.text)
-        if(dep in departments): #Проверка на дурака
-            if(len(criticals) > 0): #Проверяем количество элементов массива "критичность задачи"
+        #Проверка на дурака
+        if(dep in departments): 
+            #Проверяем количество элементов массива "критичность задачи"
+            if(len(criticals) > 0): 
                 markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
-                for i in range(len(criticals)): #Для каждого элемента перечня создаем кнопку
-                    itemtmp=types.KeyboardButton(criticals[i])
+                #Для каждого элемента перечня создаем кнопку
+                for critical in criticals: 
+                    itemtmp=types.KeyboardButton(critical)
                     markup.add(itemtmp)
             bot.send_message(message.chat.id,'Укажите приоритетность вашего обращения',reply_markup=markup)
             bot.register_next_step_handler(message, cabinet_input)
         else:
-            if(len(departments) > 0): #Проверяем количество элементов массива "отделы"
+            #Проверяем количество элементов массива "отделы"
+            if(len(departments) > 0): 
                 markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
-                for i in range(len(departments)): #Для каждого элемента перечня создаем кнопку
-                    itemtmp=types.KeyboardButton(departments[i])
+                #Для каждого элемента перечня создаем кнопку
+                for department in departments: 
+                    itemtmp=types.KeyboardButton(departments)
                     markup.add(itemtmp)
             bot.send_message(message.chat.id,'Выберите из списка!',reply_markup=markup)
             bot.register_next_step_handler(message, critical_switch)
@@ -45,21 +52,25 @@ def critical_switch(message):
 
 def cabinet_input(message):
         crit = str(message.text)
-        if(crit in criticals): #Проверка на дурака
+        #Проверка на дурака
+        if(crit in criticals): 
             bot.send_message(message.chat.id,'Укажите кабинет', reply_markup=types.ReplyKeyboardRemove())
             bot.register_next_step_handler(message, problem)
         else:
-            if(len(criticals) > 0): #Проверяем количество элементов массива "критичность задачи"
+            #Проверяем количество элементов массива "критичность задачи"
+            if(len(criticals) > 0): 
                 markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
-                for i in range(len(criticals)): #Для каждого элемента перечня создаем кнопку
-                    itemtmp=types.KeyboardButton(criticals[i])
+                #Для каждого элемента перечня создаем кнопку
+                for critical in criticals: 
+                    itemtmp=types.KeyboardButton(critical)
                     markup.add(itemtmp)
             bot.send_message(message.chat.id,'Выберите из списка!',reply_markup=markup)
             bot.register_next_step_handler(message, cabinet_input)
         
 def problem(message):
         cab = str(message.text)
-        if(cab[0] != '/'): #Проверка на дурака
+        #Проверка на дурака
+        if(cab[0] != '/'): 
             bot.send_message(message.chat.id,'Опишите Вашу проблему')
             bot.register_next_step_handler(message, finish_message)
         else:
@@ -68,8 +79,10 @@ def problem(message):
         
 def finish_message(message):
         prob = str(message.text)
-        if(prob[0] != '/'): #Проверка на дурака
-            time = datetime.now().strftime("%a, %d %b %Y %H:%M:%S") #Окончательное время регистрации заявки
+        #Проверка на дурака
+        if(prob[0] != '/'):
+            #Окончательное время регистрации заявки
+            time = datetime.now().strftime("%a, %d %b %Y %H:%M:%S")
             markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
             new_problem=types.KeyboardButton("/start")
             markup.add(new_problem)
