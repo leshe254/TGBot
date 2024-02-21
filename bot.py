@@ -67,9 +67,10 @@ if __name__ == '__main__':
         sys.exit("Задай сеты кнопок с отделами и важностью!")
     
     #Создаем клавиатуру для выбора отдела
-    keyboard = list(map(lambda x: [telebot.types.KeyboardButton(x)], departments))
-    depmarkup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    depmarkup.keyboard=keyboard
+    depmarkup=telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for department in departments: 
+        itemtmp=telebot.telebot.types.KeyboardButton(department)
+        depmarkup.add(itemtmp)
     #Создаем клавиатуру для выбора критичности
     critmarkup=telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     for critical in criticals: 
