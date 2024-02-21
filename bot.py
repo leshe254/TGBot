@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime
 import telebot
 from tokenbot import token
@@ -63,8 +64,7 @@ def finish_message(message):
 if __name__ == '__main__':
     #Проверка на наличие сетов
     if(not departments or not criticals):
-        print("Задай сеты кнопок с отделами и важностью!")
-        exit(1)
+        sys.exit("Задай сеты кнопок с отделами и важностью!")
     else:
          #Создаем клавиатуру для выбора отдела
         depmarkup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
