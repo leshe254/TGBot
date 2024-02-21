@@ -13,7 +13,7 @@ criticals = {"Жизненно-необходимо", "Средняя важно
 def start_message(message):
     user_nik = str(message.from_user.username)
     #Приветствие собеседника!
-    bot.send_message(message.chat.id, f"Здравствуйте, {str(message.chat.first_name)}!") 
+    bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!") 
     bot.send_message(message.chat.id,'Выберите к кому хотите обратиться',reply_markup=depmarkup)
     bot.register_next_step_handler(message, critical_switch)
     
@@ -65,20 +65,16 @@ if __name__ == '__main__':
     #Проверка на наличие сетов
     if(not departments or not criticals):
         sys.exit("Задай сеты кнопок с отделами и важностью!")
-    else:
-         #Создаем клавиатуру для выбора отдела
-        depmarkup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for department in departments: 
-            itemtmp=telebot.types.KeyboardButton(department)
-            depmarkup.add(itemtmp)
-        #Создаем клавиатуру для выбора критичности
-        critmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for critical in criticals: 
-                itemtmp=telebot.types.KeyboardButton(critical)
-                critmarkup.add(itemtmp)
-        #Создаем клаву для "/start"
-        startmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-        startbtn=telebot.types.KeyboardButton("/start")
-        startmarkup.add(startbtn)
-        #Запуск бота
-        bot.infinity_polling()
+    
+    #Создаем клавиатуру для выбора отдела
+    keyboarddep = list(map(telebot.types.KeyboardButton, departments))
+    depmarkup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, keyboard=keyboarddep)
+    #Создаем клавиатуру для выбора критичности
+    keyboardcrit = list(map(telebot.types.KeyboardButton, criticals))
+    critmarkup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, keyboard=keyboardcrit)
+    #Создаем клаву для "/start"
+    startmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    startbtn=telebot.types.KeyboardButton("/start")
+    startmarkup.add(startbtn)
+    #Запуск бота
+    bot.infinity_polling()
