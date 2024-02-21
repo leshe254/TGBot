@@ -5,33 +5,8 @@ from tokenbot import token
 bot=telebot.TeleBot(token)
 
 #Сеты с отделами и критичностью задач
-departments = ["Администрация", "Администрация эл. журнала", "IT отдел", "Завхоз"]
-criticals = ["Жизненно-необходимо", "Средняя важность", "В свободное время"]
-
-
-if __name__ == '__main__':
-    #Проверка на наличие сетов
-    if(len(departments) == True & len(criticals) == True):
-        #Создаем клавиатуру для выбора отдела
-        depmarkup=types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for department in departments: 
-            itemtmp=types.KeyboardButton(department)
-            depmarkup.add(itemtmp)
-        #Создаем клавиатуру для выбора критичности
-        critmarkup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for critical in criticals: 
-                itemtmp=types.KeyboardButton(critical)
-                critmarkup.add(itemtmp)
-        #Создаем клаву для "/start"
-        startmarkup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        startbtn=types.KeyboardButton("/start")
-        startmarkup.add(startbtn)
-        #Запуск бота
-        bot.infinity_polling()
-    else:
-         print("Задай сеты кнопок с отделами и важностью!")
-         exit(1)
-
+departments = {"Администрация", "Администрация эл. журнала", "IT отдел", "Завхоз"}
+criticals = {"Жизненно-необходимо", "Средняя важность", "В свободное время"}
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
@@ -57,7 +32,7 @@ def cabinet_input(message):
         crit = str(message.text)
         #Проверка на дурака
         if(crit in criticals): 
-            bot.send_message(message.chat.id,'Укажите кабинет', reply_markup=types.ReplyKeyboardRemove())
+            bot.send_message(message.chat.id,'Укажите кабинет', reply_markup=telebot.types.ReplyKeyboardRemove())
             bot.register_next_step_handler(message, problem)
         else:
             bot.send_message(message.chat.id,'Выберите из списка!',reply_markup=critmarkup)
@@ -84,3 +59,26 @@ def finish_message(message):
         else:
             bot.send_message(message.chat.id,'Недопустимая команда, попробуйте начать описание не с "/"')
             bot.register_next_step_handler(message, finish_message)
+
+if __name__ == '__main__':
+    #Проверка на наличие сетов
+    if(not departments or not criticals):
+        print("Задай сеты кнопок с отделами и важностью!")
+        exit(1)
+    else:
+         #Создаем клавиатуру для выбора отдела
+        depmarkup=telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        for department in departments: 
+            itemtmp=telebot.telebot.types.KeyboardButton(department)
+            depmarkup.add(itemtmp)
+        #Создаем клавиатуру для выбора критичности
+        critmarkup = telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        for critical in criticals: 
+                itemtmp=telebot.telebot.types.KeyboardButton(critical)
+                critmarkup.add(itemtmp)
+        #Создаем клаву для "/start"
+        startmarkup = telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        startbtn=telebot.telebot.types.KeyboardButton("/start")
+        startmarkup.add(startbtn)
+        #Запуск бота
+        bot.infinity_polling()
