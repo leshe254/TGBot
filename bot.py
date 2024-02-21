@@ -26,6 +26,7 @@ if __name__ == '__main__':
         startmarkup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         startbtn=types.KeyboardButton("/start")
         startmarkup.add(startbtn)
+        #Запуск бота
         bot.infinity_polling()
     else:
          print("Задай сеты кнопок с отделами и важностью!")
