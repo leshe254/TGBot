@@ -7,19 +7,9 @@ bot=telebot.TeleBot(token)
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    time = int(datetime.now().strftime("%H"))
     user_first_name = str(message.chat.first_name)
     user_nik = str(message.from_user.username)
-    #Приветствие собеседника!
-    
-    if(time > 18 & time < 24):
-        bot.send_message(message.chat.id, f"Добрый вечер, {user_first_name}!")
-    elif(time > 12 & time < 18):
-        bot.send_message(message.chat.id, f"Добрый день, {user_first_name}!")
-    elif(time > 6 & time < 12):
-        bot.send_message(message.chat.id, f"Доброе утро, {user_first_name}!")
-    elif(time > 0 & time < 6):
-        bot.send_message(message.chat.id, f"Доброй ночи, {user_first_name}!")
+    bot.send_message(message.chat.id, f"Здравствуйте, {user_first_name}!") #Приветствие собеседника!
     
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton("Администрация")
@@ -55,6 +45,7 @@ def problem(message):
         bot.register_next_step_handler(message, finish_message);
         
 def finish_message(message):
+        time = datetime.now().strftime("%a, %d %b %Y %H:%M:%S") #Окончательное время регистрации заявки
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
         new_problem=types.KeyboardButton("/start")
         markup.add(new_problem)
