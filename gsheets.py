@@ -2,10 +2,10 @@ import gspread
 from datetime import datetime
 
 #Двумерный массив с сопоставлением отдела и ссылки на таблицу
-sheets = [["administration", "https://docs.google.com/spreadsheets/d/1H00lV5YvAA6wVHLankgA8zp5jHb0ktjMsi9aVrFiJRo"],
-["ejournal" , "https://docs.google.com/spreadsheets/d/1Fsj8fp93V_R0rLY_xtUeMSKWrqQv5N1Igiy1kTrb9Iw"],
-["it", "https://docs.google.com/spreadsheets/d/14NnC9nyCtADkD81q9RMFJKFfNz3RTo_egr3eO8GUQzk"],
-["supmanager", "https://docs.google.com/spreadsheets/d/17ZJ6i08O_Ebg2py6FUHqul2Bp-rjbRxUq41mDrHhpN0"]]
+sheets = [["Администрация", "https://docs.google.com/spreadsheets/d/1H00lV5YvAA6wVHLankgA8zp5jHb0ktjMsi9aVrFiJRo"],
+["Администрация эл. журнала" , "https://docs.google.com/spreadsheets/d/1Fsj8fp93V_R0rLY_xtUeMSKWrqQv5N1Igiy1kTrb9Iw"],
+["IT отдел", "https://docs.google.com/spreadsheets/d/14NnC9nyCtADkD81q9RMFJKFfNz3RTo_egr3eO8GUQzk"],
+["Завхоз", "https://docs.google.com/spreadsheets/d/17ZJ6i08O_Ebg2py6FUHqul2Bp-rjbRxUq41mDrHhpN0"]]
 
 #Привязка токена
 gc = gspread.service_account("tokengoogle.json")
@@ -19,6 +19,4 @@ def senddata(dep, user_nik, cabinet, critical, problem):
             #Функция подключения к таблице и получение первого листа
             sh = gc.open_by_url(sheets[i][1]).get_worksheet(0)
             sh.append_row([time, user_nik, cabinet, critical, problem],value_input_option='RAW',insert_data_option=None)
-            print(f"Оставлена новая заявка в отдел {dep}")
-
-senddata('ejournal', '@lesssd', 'Спортзал', 'Жизненно-необходимо', 'Нет мяча!')
+            print(f"{time}: Оставлена новая заявка в отдел {dep}!")

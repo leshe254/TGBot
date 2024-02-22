@@ -1,5 +1,4 @@
 import sys
-from datetime import datetime
 import telebot
 from tokenbot import token
 
@@ -53,8 +52,6 @@ def finish_message(message):
         prob = str(message.text)
         #Проверка на дурака
         if(prob[0] != '/'): 
-            #Окончательное время регистрации заявки
-            time = datetime.now().strftime("%a, %d %b %Y %H:%M:%S") 
             bot.send_message(message.chat.id,'Спасибо за обращение, информация передана! Чтобы зарегистрировать новое обращение - нажмите "/start"',reply_markup=startmarkup)
             #Тут должна быть отправка данных на сервер
         else:
