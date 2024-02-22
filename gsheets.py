@@ -17,7 +17,7 @@ gc = gspread.service_account("tokengoogle.json")
 
 
 # Распределение заявок по таблицам отделов и добавление в таблицы новой строки
-def senddata(dep, user_nik, cabinet, critical, problem):
+def senddata(user_nik, dep, crit, cab, prob):
     for i in range(0, len(sheets)):
         if dep == sheets[i][0]:
             # Окончательное время регистрации заявки
@@ -25,6 +25,6 @@ def senddata(dep, user_nik, cabinet, critical, problem):
             # Функция подключения к таблице и получение первого листа
             sh = gc.open_by_url(sheets[i][1]).get_worksheet(0)
             sh.append_row(
-                [time, user_nik, cabinet, critical, problem], value_input_option='RAW', insert_data_option=None
+                [time, user_nik, cab, crit, prob], value_input_option='RAW', insert_data_option=None
             )
             print(f"{time}: Оставлена новая заявка в отдел {dep}!")
