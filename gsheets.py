@@ -1,9 +1,24 @@
 import gspread
+from datetime import datetime
+
+#Двумерный массив с сопоставлением отдела и ссылки на таблицу
+sheets = [["administration", "https://docs.google.com/spreadsheets/d/1H00lV5YvAA6wVHLankgA8zp5jHb0ktjMsi9aVrFiJRo"],
+["ejournal" , "https://docs.google.com/spreadsheets/d/1Fsj8fp93V_R0rLY_xtUeMSKWrqQv5N1Igiy1kTrb9Iw"],
+["it", "https://docs.google.com/spreadsheets/d/14NnC9nyCtADkD81q9RMFJKFfNz3RTo_egr3eO8GUQzk"],
+["supmanager", "https://docs.google.com/spreadsheets/d/17ZJ6i08O_Ebg2py6FUHqul2Bp-rjbRxUq41mDrHhpN0"]]
 
 #Привязка токена
-Sheet_credential = gspread.service_account("tokengoogle.json")
+gc = gspread.service_account("tokengoogle.json")
 
-#Функция подключения к таблице и записи в неё новых строк
-def senddata(department, date, nikname, cabinet, critical, problem):
-    spreadsheet = Sheet_credential.open_by_url("https://docs.google.com/spreadsheets/d/1H00lV5YvAA6wVHLankgA8zp5jHb0ktjMsi9aVrFiJRo")
-    
+#Распределение заявок по таблицам отделов и добавление в таблицы новой строки
+def senddata(dep, user_nik, cabinet, critical, problem):
+    for i in range(0, 4):
+        if(dep == sheets[i][0]):
+            #Окончательное время регистрации заявки
+            time = datetime.now().strftime("%d %b %Y, %H:%M") 
+            #Функция подключения к таблице и получение первого листа
+            sh = gc.open_by_url(sheets[i][1]).get_worksheet(0)
+            sh.append_row([time, user_nik, cabinet, critical, problem],value_input_option='RAW',insert_data_option=None)
+            print(f"Оставлена новая заявка в отдел {dep}")
+
+senddata('ejournal', '@lesssd', 'Спортзал', 'Жизненно-необходимо', 'Нет мяча!')
