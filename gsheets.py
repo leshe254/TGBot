@@ -15,6 +15,7 @@ sheets = [
 # Привязка токена
 gc = gspread.service_account("tokengoogle.json")
 
+
 # Распределение заявок по таблицам отделов и добавление в таблицы новой строки
 def senddata(dep, user_nik, cabinet, critical, problem):
     for i in range(0, len(sheets)):
