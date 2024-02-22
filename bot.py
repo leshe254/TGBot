@@ -1,6 +1,7 @@
 import sys
 import telebot
 from tokenbot import token
+from gsheets import senddata
 
 bot=telebot.TeleBot(token)
 
@@ -54,6 +55,7 @@ def finish_message(message):
         if(prob[0] != '/'): 
             bot.send_message(message.chat.id,'Спасибо за обращение, информация передана! Чтобы зарегистрировать новое обращение - нажмите "/start"',reply_markup=startmarkup)
             #Тут должна быть отправка данных на сервер
+            #senddata()
         else:
             bot.send_message(message.chat.id,'Недопустимая команда, попробуйте начать описание не с "/"')
             bot.register_next_step_handler(message, finish_message)
