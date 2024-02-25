@@ -17,12 +17,7 @@ gc = gspread.service_account("tokengoogle.json")
 
 
 # Распределение заявок по таблицам отделов и добавление в таблицы новой строки
-async def senddata(datalist):
-    user_nik = datalist[0]
-    dep = datalist [1]
-    crit = datalist[2]
-    cab = datalist[3]
-    prob = datalist[4]
+def senddata(user_nik, dep, crit, cab, prob):
     for i in range(0, len(sheets)):
         if dep == sheets[i][0]:
             # Окончательное время регистрации заявки
