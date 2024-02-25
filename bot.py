@@ -11,10 +11,21 @@ bot = telebot.TeleBot(token, skip_pending=True)
 departments = ["Администрация", "Администрация эл. журнала", "IT отдел", "Завхоз"]
 criticals = ["Жизненно-необходимо", "Средняя важность", "В свободное время", "Вернуться назад"]
 # Параметры, которые передаются дальше
-datalist = []
+datalist = ['От кого', 'в какой отдел', 'Критичность', 'Кабинет', 'Проблема']
 # Режим работы
 workdays = {'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sun', 'Sat'}
 workhours = ['8', '20']
+
+# ID чатов для пересылки сообщений о новых обращениях
+chatids = [
+    ["Администрация", "https://docs.google.com/spreadsheets/d/1H00lV5YvAA6wVHLankgA8zp5jHb0ktjMsi9aVrFiJRo"],
+    [
+        "Администрация эл. журнала",
+        362796634,
+    ],
+    ["IT отдел", 283476064],
+    ["Завхоз", "https://docs.google.com/spreadsheets/d/17ZJ6i08O_Ebg2py6FUHqul2Bp-rjbRxUq41mDrHhpN0"],
+]
 
 # Проверка рабочего времени бота
 def check_worktime():
@@ -28,6 +39,7 @@ def check_worktime():
 
 @bot.message_handler(content_types=['text'])
 def start_message(message):
+    print(message.chat.id)
     if(check_worktime()):
         if(str(message.text) != "/start"):
             bot.send_message(message.chat.id, "Вероятнее всего возникла проблема, попробуйте начать сначала", reply_markup=startmarkup)
@@ -36,11 +48,10 @@ def start_message(message):
             # Приветствие собеседника!
             bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
             bot.send_message(message.chat.id, 'Выберите к кому хотите обратиться', reply_markup=depmarkup)
-            datalist.append(user_nik)
+            datalist[0] = user_nik
             bot.register_next_step_handler(message, critical_switch, datalist)
     else:
         bot.send_message(message.chat.id, "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)", reply_markup=startmarkup)
-
 
 
 def critical_switch(message, datalist):
@@ -49,7 +60,7 @@ def critical_switch(message, datalist):
         # Проверка на дурака
         if dep in departments:
             bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
-            datalist.append(dep)
+            datalist[1] = dep
             bot.register_next_step_handler(message, cabinet_input, datalist)
         else:
             bot.send_message(message.chat.id, 'Выберите из списка!', reply_markup=depmarkup)
@@ -69,7 +80,7 @@ def cabinet_input(message, datalist):
                 bot.register_next_step_handler(message, critical_switch, datalist)
             else:
                 bot.send_message(message.chat.id, 'Укажите кабинет', reply_markup=backmarkup)
-                datalist.append(crit)
+                datalist[2] = crit
                 bot.register_next_step_handler(message, problem, datalist)
         else:
             bot.send_message(message.chat.id, 'Выберите из списка!', reply_markup=critmarkup)
@@ -88,7 +99,7 @@ def problem(message, datalist):
                 bot.register_next_step_handler(message, cabinet_input, datalist)
             else:
                 bot.send_message(message.chat.id, 'Опишите Вашу проблему')
-                datalist.append(cab)
+                datalist[3] = cab
                 bot.register_next_step_handler(message, problem_message, datalist)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
@@ -112,9 +123,18 @@ def problem_message(message, datalist):
                     'Спасибо за обращение, информация передана! Чтобы зарегистрировать новое обращение - нажмите "/start"',
                     reply_markup=startmarkup,
                 )
-                datalist.append(prob)
+                datalist[4] = prob
                 # Вызываем метод передачи данных в Гугл таблицы
                 senddata(datalist)
+
+                # Поиск среди чатов и отправка уведомления начальнику отдела
+                for i in range(0, len(chatids)):
+                    if datalist[1] == chatids[i][0]:
+                        bot.send_message(
+                        chatids[i][1],
+                        f"Вам поступило новое обращение от @{datalist[0]}\n{datalist[4]} в {datalist[3]}!",
+                        reply_markup=startmarkup,
+                        )
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте начать описание не с "/"')
             bot.register_next_step_handler(message, problem_message, datalist)
