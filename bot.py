@@ -13,7 +13,7 @@ criticals = ["Жизненно-необходимо", "Средняя важно
 # Параметры, которые передаются дальше
 datalist = []
 # Режим работы
-workdays = {'Mon', 'Tue', 'Wed', 'Thu', 'Fri'}
+workdays = {'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sun', 'Sat'}
 workhours = ['8', '20']
 
 # Проверка рабочего времени бота
@@ -36,7 +36,7 @@ def start_message(message):
             # Приветствие собеседника!
             bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
             bot.send_message(message.chat.id, 'Выберите к кому хотите обратиться', reply_markup=depmarkup)
-            datalist.extend(user_nik)
+            datalist.append(user_nik)
             bot.register_next_step_handler(message, critical_switch, datalist)
     else:
         bot.send_message(message.chat.id, "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)", reply_markup=startmarkup)
@@ -49,7 +49,7 @@ def critical_switch(message, datalist):
         # Проверка на дурака
         if dep in departments:
             bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
-            datalist.extend(dep)
+            datalist.append(dep)
             bot.register_next_step_handler(message, cabinet_input, datalist)
         else:
             bot.send_message(message.chat.id, 'Выберите из списка!', reply_markup=depmarkup)
@@ -69,7 +69,7 @@ def cabinet_input(message, datalist):
                 bot.register_next_step_handler(message, critical_switch, datalist)
             else:
                 bot.send_message(message.chat.id, 'Укажите кабинет', reply_markup=backmarkup)
-                datalist.extend(crit)
+                datalist.append(crit)
                 bot.register_next_step_handler(message, problem, datalist)
         else:
             bot.send_message(message.chat.id, 'Выберите из списка!', reply_markup=critmarkup)
@@ -88,7 +88,7 @@ def problem(message, datalist):
                 bot.register_next_step_handler(message, cabinet_input, datalist)
             else:
                 bot.send_message(message.chat.id, 'Опишите Вашу проблему')
-                datalist.extend(cab)
+                datalist.append(cab)
                 bot.register_next_step_handler(message, problem_message, datalist)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
@@ -112,7 +112,7 @@ def problem_message(message, datalist):
                     'Спасибо за обращение, информация передана! Чтобы зарегистрировать новое обращение - нажмите "/start"',
                     reply_markup=startmarkup,
                 )
-                datalist.extend(prob)
+                datalist.append(prob)
                 # Вызываем метод передачи данных в Гугл таблицы
                 senddata(datalist)
         else:

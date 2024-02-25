@@ -23,6 +23,7 @@ def senddata(datalist):
     crit = datalist[2]
     cab = datalist[3]
     prob = datalist[4]
+    print(datalist)
     for i in range(0, len(sheets)):
         if dep == sheets[i][0]:
             # Окончательное время регистрации заявки
