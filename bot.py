@@ -19,12 +19,9 @@ workhours = ['8', '20']
 # ID чатов для пересылки сообщений о новых обращениях
 chatids = [
     ["Администрация", 337998259],
-    [
-        "Администрация эл. журнала",
-        "https://docs.google.com/spreadsheets/d/1Fsj8fp93V_R0rLY_xtUeMSKWrqQv5N1Igiy1kTrb9Iw",
-    ],
+    ["Администрация эл. журнала", 362796634],
     ["IT отдел", 283476064],
-    ["Завхоз", "https://docs.google.com/spreadsheets/d/17ZJ6i08O_Ebg2py6FUHqul2Bp-rjbRxUq41mDrHhpN0"],
+    ["Завхоз", 5162642969],
 ]
 
 
@@ -40,7 +37,7 @@ def check_worktime():
 
 @bot.message_handler(content_types=['text'])
 def start_message(message):
-    print(message.chat.id)
+    #print(message.chat.id) Перехват id чата для отправки уведомлений начальнику отдела
     if check_worktime():
         if str(message.text) != "/start":
             bot.send_message(
