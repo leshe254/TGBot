@@ -1,8 +1,10 @@
 import sys
 import telebot
+import time
 from tokenbot import token
 from gsheets import senddata
 from datetime import datetime
+from requests.exceptions import RequestException
 
 # Задаем токен для телебота и игнорируем висячие сообщения
 bot = telebot.TeleBot(token, skip_pending=True)
@@ -186,4 +188,11 @@ if __name__ == '__main__':
     backmarkup.add(backbtn)
 
     # Запуск бота
-    bot.infinity_polling()
+    while True:
+        try:
+            bot.infinity_polling(timeout=90, long_polling_timeout = 5)
+        except RequestException as err:
+            print(err)
+            print('Разрыв коннекта до телеграмма...')
+            time.sleep(15)
+            print('Переподключение...')
