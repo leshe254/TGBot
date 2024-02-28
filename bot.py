@@ -122,16 +122,16 @@ def cabinet_input(message, user_nik, dep):
 def problem(message, user_nik, dep, crit):
     if check_worktime():
         cab = str(message.text)
-        # Проверка на наличие меди-контента
-        if cab == "None":
-            bot.send_message(
-                message.chat.id,
-                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
-            )
-            bot.register_next_step_handler(message, problem, user_nik, dep, crit)
-            # Проверка на дурака
+        # Проверка на дурака
         if cab[0] != '/':
-            if cab == "Вернуться назад":
+            # Проверка на наличие медиа-контента
+            if cab == "None":
+                bot.send_message(
+                    message.chat.id,
+                    'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+                )
+                bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+            elif cab == "Вернуться назад":
                 bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
                 bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
             else:
@@ -152,17 +152,17 @@ def problem(message, user_nik, dep, crit):
 def problem_message(message, user_nik, dep, crit, cab):
     if check_worktime():
         prob = str(message.text)
-        # Проверка на наличие меди-контента
-        if prob == "None":
-            bot.send_message(
-                message.chat.id,
-                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...',
-                reply_markup=startmarkup,
-            )
-            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
         # Проверка на дурака
         if prob[0] != '/':
-            if prob == "Вернуться назад":
+            # Проверка на наличие медиа-контента
+            if prob == "None":
+                bot.send_message(
+                    message.chat.id,
+                    'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...',
+                    reply_markup=backmarkup,
+                )
+                bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
+            elif prob == "Вернуться назад":
                 bot.send_message(message.chat.id, 'Укажите кабинет', reply_markup=backmarkup)
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
             else:
