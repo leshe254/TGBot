@@ -122,7 +122,14 @@ def cabinet_input(message, user_nik, dep):
 def problem(message, user_nik, dep, crit):
     if check_worktime():
         cab = str(message.text)
-        # Проверка на дурака
+        # Проверка на наличие меди-контента
+        if cab == "None":
+            bot.send_message(
+                message.chat.id,
+                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+            )
+            bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+            # Проверка на дурака
         if cab[0] != '/':
             if cab == "Вернуться назад":
                 bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
@@ -130,12 +137,6 @@ def problem(message, user_nik, dep, crit):
             else:
                 bot.send_message(message.chat.id, 'Опишите Вашу проблему')
                 bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
-        elif cab == "None":
-            bot.send_message(
-                message.chat.id,
-                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
-            )
-            bot.register_next_step_handler(message, problem, user_nik, dep, crit)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
             bot.register_next_step_handler(message, problem, user_nik, dep, crit)
@@ -151,6 +152,14 @@ def problem(message, user_nik, dep, crit):
 def problem_message(message, user_nik, dep, crit, cab):
     if check_worktime():
         prob = str(message.text)
+        # Проверка на наличие меди-контента
+        if prob == "None":
+            bot.send_message(
+                message.chat.id,
+                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...',
+                reply_markup=startmarkup,
+            )
+            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
         # Проверка на дурака
         if prob[0] != '/':
             if prob == "Вернуться назад":
@@ -180,13 +189,6 @@ def problem_message(message, user_nik, dep, crit, cab):
                                 f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
                                 reply_markup=startmarkup,
                             )
-        elif prob == "None":
-            bot.send_message(
-                message.chat.id,
-                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...',
-                reply_markup=startmarkup,
-            )
-            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте начать описание не с "/"')
             bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
