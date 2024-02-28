@@ -31,7 +31,7 @@ chatids = [
 def check_worktime():
     weekday = datetime.now().strftime("%a")
     dayhour = datetime.now().strftime("%H")
-    if weekday in workdays and int(dayhour) > int(workhours[0]) and int(dayhour) < int(workhours[1]):
+    if weekday in workdays and int(dayhour) >= int(workhours[0]) and int(dayhour) < int(workhours[1]):
         return True
     else:
         return False
