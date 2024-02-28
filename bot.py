@@ -39,9 +39,9 @@ def check_worktime():
 
 @bot.message_handler(content_types=['text'])
 def start_message(message):
-    #print(message.chat.id) Перехват id чата для отправки уведомлений начальнику отдела
+    # print(message.chat.id) Перехват id чата для отправки уведомлений начальнику отдела
     if check_worktime():
-        if(str(message.text) != "/start") and (message.contact == None):
+        if (str(message.text) != "/start") and (message.contact == None):
             bot.send_message(
                 message.chat.id,
                 "Вероятнее всего возникла проблема, попробуйте начать сначала",
@@ -49,10 +49,14 @@ def start_message(message):
             )
         else:
             user_nik = str(message.from_user.username)
-            if(user_nik == 'None'):
-                if(message.contact is None):
+            if user_nik == 'None':
+                if message.contact is None:
                     # print("Пишет аккаунт без username")
-                    bot.send_message(message.chat.id, 'Оставьте Ваш номер чтобы мы смогли связаться с Вами. ', reply_markup=phoneboard)
+                    bot.send_message(
+                        message.chat.id,
+                        'Оставьте Ваш номер чтобы мы смогли связаться с Вами. ',
+                        reply_markup=phoneboard,
+                    )
                     bot.register_next_step_handler(message, start_message)
                 else:
                     user_nik = "+" + str(message.contact.phone_number)
@@ -126,6 +130,12 @@ def problem(message, user_nik, dep, crit):
             else:
                 bot.send_message(message.chat.id, 'Опишите Вашу проблему')
                 bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
+        elif cab == "None":
+            bot.send_message(
+                message.chat.id,
+                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+            )
+            bot.register_next_step_handler(message, problem, user_nik, dep, crit)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
             bot.register_next_step_handler(message, problem, user_nik, dep, crit)
@@ -158,7 +168,7 @@ def problem_message(message, user_nik, dep, crit, cab):
                 # Поиск среди чатов и отправка уведомления начальнику отдела
                 for i in range(0, len(chatids)):
                     if dep == chatids[i][0]:
-                        if(user_nik[0] == '+'):
+                        if user_nik[0] == '+':
                             bot.send_message(
                                 chatids[i][1],
                                 f"Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!",
@@ -170,6 +180,13 @@ def problem_message(message, user_nik, dep, crit, cab):
                                 f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
                                 reply_markup=startmarkup,
                             )
+        elif prob == "None":
+            bot.send_message(
+                message.chat.id,
+                'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...',
+                reply_markup=startmarkup,
+            )
+            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте начать описание не с "/"')
             bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
@@ -213,7 +230,7 @@ if __name__ == '__main__':
     # Запуск бота
     while True:
         try:
-            bot.infinity_polling(timeout=90, long_polling_timeout = 5)
+            bot.infinity_polling(timeout=90, long_polling_timeout=5)
         except RequestException as err:
             print(err)
             print('Разрыв коннекта до телеграмма...')
