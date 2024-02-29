@@ -69,7 +69,7 @@ def start_message(message):
                     # print("Пишет аккаунт без username")
                     bot.send_message(
                         message.chat.id,
-                        'Оставьте Ваш номер чтобы мы смогли связаться с Вами. ',
+                        "Оставьте Ваш номер чтобы мы смогли связаться с Вами.",
                         reply_markup=phoneboard,
                     )
                     bot.register_next_step_handler(message, start_message)
@@ -143,7 +143,7 @@ def problem(message, user_nik, dep, crit):
             if cab == "None":
                 bot.send_message(
                     message.chat.id,
-                    'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+                    "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...",
                 )
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
             elif cab == "Вернуться назад":
@@ -247,13 +247,7 @@ if __name__ == '__main__':
     while True:
         try:
             bot.infinity_polling(timeout=90, long_polling_timeout=5)
-<<<<<<< HEAD
         except RequestException:
             print("Разрыв коннекта до телеграмма...")
-=======
-        except RequestException as err:
-            print(err)
-            print('Разрыв коннекта до телеграмма...')
->>>>>>> refs/remotes/origin/main
             time.sleep(15)
             print("Переподключение...")
