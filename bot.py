@@ -141,6 +141,15 @@ def problem(message, user_nik, dep, crit):
         if cab[0] != '/':
             if cab == "Вернуться назад":
                 bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
+            # Проверка на наличие медиа-контента
+            if cab == "None":
+                bot.send_message(
+                    message.chat.id,
+                    'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+                )
+                bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+            elif cab == "Вернуться назад":
+                bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
                 bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
             else:
                 bot.send_message(message.chat.id, "Опишите Вашу проблему")
@@ -175,7 +184,7 @@ def problem_message(message, user_nik, dep, crit, cab):
                 senddata(user_nik, dep, crit, cab, prob)
 
                 # Поиск среди чатов и отправка уведомления начальнику отдела
-                if chatids.get(dep) != None:
+                if not chatids.get(dep) is None:
                     if user_nik[0] == '+':
                         bot.send_message(
                             chatids.get(dep),
