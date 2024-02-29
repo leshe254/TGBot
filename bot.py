@@ -139,8 +139,15 @@ def problem(message, user_nik, dep, crit):
         cab = str(message.text)
         # Проверка на дурака
         if cab[0] != '/':
-            if cab == "Вернуться назад":
-                bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
+            # Проверка на наличие медиа-контента
+            if cab == "None":
+                bot.send_message(
+                    message.chat.id,
+                    'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+                )
+                bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+            elif cab == "Вернуться назад":
+                bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
                 bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
             else:
                 bot.send_message(message.chat.id, "Опишите Вашу проблему")
@@ -162,7 +169,15 @@ def problem_message(message, user_nik, dep, crit, cab):
         prob = str(message.text)
         # Проверка на дурака
         if prob[0] != '/':
-            if prob == "Вернуться назад":
+            # Проверка на наличие медиа-контента
+            if prob == "None":
+                bot.send_message(
+                    message.chat.id,
+                    "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...",
+                    reply_markup=backmarkup,
+                )
+                bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
+            elif prob == "Вернуться назад":
                 bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
             else:
@@ -232,7 +247,13 @@ if __name__ == '__main__':
     while True:
         try:
             bot.infinity_polling(timeout=90, long_polling_timeout=5)
+<<<<<<< HEAD
         except RequestException:
             print("Разрыв коннекта до телеграмма...")
+=======
+        except RequestException as err:
+            print(err)
+            print('Разрыв коннекта до телеграмма...')
+>>>>>>> refs/remotes/origin/main
             time.sleep(15)
             print("Переподключение...")
