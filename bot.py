@@ -69,7 +69,7 @@ def start_message(message):
                     # print("Пишет аккаунт без username")
                     bot.send_message(
                         message.chat.id,
-                        'Оставьте Ваш номер чтобы мы смогли связаться с Вами. ',
+                        "Оставьте Ваш номер чтобы мы смогли связаться с Вами.",
                         reply_markup=phoneboard,
                     )
                     bot.register_next_step_handler(message, start_message)
@@ -143,11 +143,11 @@ def problem(message, user_nik, dep, crit):
             if cab == "None":
                 bot.send_message(
                     message.chat.id,
-                    'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...',
+                    "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...",
                 )
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
             elif cab == "Вернуться назад":
-                bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
+                bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
                 bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
             else:
                 bot.send_message(message.chat.id, "Опишите Вашу проблему")
