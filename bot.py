@@ -19,18 +19,19 @@ workdays = {'Mon', 'Tue', 'Wed', 'Thu', 'Fri'}
 workhours = ['8', '20']
 
 # ID чатов для пересылки сообщений о новых обращениях
-chatids = [
-    ["Администрация", 337998259],
-    ["Администрация эл. журнала", 362796634],
-    ["IT отдел", 283476064],
-    ["Завхоз", 5162642969],
-]
+chatids = {
+    "Администрация": 337998259,
+    "Администрация эл. журнала": 362796634,
+    "IT отдел": 283476064,
+    "Завхоз": 5162642969,
+}
 
 
 # Проверка рабочего времени бота
 def check_worktime():
-    weekday = datetime.now().strftime("%a")
-    dayhour = datetime.now().strftime("%H")
+    time = datetime.now()
+    weekday = time.strftime("%a")
+    dayhour = time.strftime("%H")
     if weekday in workdays and int(dayhour) > int(workhours[0]) and int(dayhour) < int(workhours[1]):
         return True
     else:
@@ -39,31 +40,49 @@ def check_worktime():
 
 @bot.message_handler(content_types=['text'])
 def start_message(message):
-    #print(message.chat.id) Перехват id чата для отправки уведомлений начальнику отдела
+    # Перехват id чата для отправки уведомлений начальнику отдела
+    print(message.chat.id)
+    # Если сейчас рабочее время
     if check_worktime():
-        if(str(message.text) != "/start") and (message.contact == None):
-            bot.send_message(
-                message.chat.id,
-                "Вероятнее всего возникла проблема, попробуйте начать сначала",
-                reply_markup=startmarkup,
-            )
+        # Если не пришла команда начать и пользователь без имени не поделился контактом
+        if (str(message.text) != "/start") and (message.contact is None):
+            # Если пользователь решил ввести текстом свой номер телдефона
+            if str(message.text).isdigit() or (str(message.text))[0] == '+':
+                bot.send_message(
+                    message.chat.id,
+                    "Номер вводить нет необходимости\nНажмите кнопку ниже",
+                    reply_markup=phoneboard,
+                )
+            # Если бот перезапускался или другире проблемы - возвращаем его на старт
+            else:
+                bot.send_message(
+                    message.chat.id,
+                    "Похоже Вас долого не было\nНеобходимо повторно заполнить заявку",
+                    reply_markup=startmarkup,
+                )
+            bot.register_next_step_handler(message, start_message)
+        # Если пользователь прислал сообщение текстом
         else:
             user_nik = str(message.from_user.username)
-            if(user_nik == 'None'):
-                if(message.contact is None):
+            if user_nik == 'None':
+                if message.contact is None:
                     # print("Пишет аккаунт без username")
-                    bot.send_message(message.chat.id, 'Оставьте Ваш номер чтобы мы смогли связаться с Вами. ', reply_markup=phoneboard)
+                    bot.send_message(
+                        message.chat.id,
+                        'Оставьте Ваш номер чтобы мы смогли связаться с Вами. ',
+                        reply_markup=phoneboard,
+                    )
                     bot.register_next_step_handler(message, start_message)
                 else:
                     user_nik = "+" + str(message.contact.phone_number)
                     # Приветствие собеседника!
                     bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
-                    bot.send_message(message.chat.id, 'Выберите к кому хотите обратиться', reply_markup=depmarkup)
+                    bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
                     bot.register_next_step_handler(message, critical_switch, user_nik)
             else:
                 # Приветствие собеседника!
                 bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
-                bot.send_message(message.chat.id, 'Выберите к кому хотите обратиться', reply_markup=depmarkup)
+                bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
                 bot.register_next_step_handler(message, critical_switch, user_nik)
     else:
         bot.send_message(
@@ -78,10 +97,10 @@ def critical_switch(message, user_nik):
         dep = str(message.text)
         # Проверка на дурака
         if dep in departments:
-            bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
+            bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
             bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
         else:
-            bot.send_message(message.chat.id, 'Выберите из списка!', reply_markup=depmarkup)
+            bot.send_message(message.chat.id, "Выберите из списка!", reply_markup=depmarkup)
             bot.register_next_step_handler(message, critical_switch, user_nik)
     else:
         bot.send_message(
@@ -98,13 +117,13 @@ def cabinet_input(message, user_nik, dep):
         # Проверка на дурака
         if crit in criticals:
             if crit == "Вернуться назад":
-                bot.send_message(message.chat.id, 'Выберите к кому хотите обратиться', reply_markup=depmarkup)
+                bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
                 bot.register_next_step_handler(message, critical_switch, user_nik)
             else:
-                bot.send_message(message.chat.id, 'Укажите кабинет', reply_markup=backmarkup)
+                bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
         else:
-            bot.send_message(message.chat.id, 'Выберите из списка!', reply_markup=critmarkup)
+            bot.send_message(message.chat.id, "Выберите из списка!", reply_markup=critmarkup)
             bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
     else:
         bot.send_message(
@@ -121,10 +140,10 @@ def problem(message, user_nik, dep, crit):
         # Проверка на дурака
         if cab[0] != '/':
             if cab == "Вернуться назад":
-                bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
+                bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
                 bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
             else:
-                bot.send_message(message.chat.id, 'Опишите Вашу проблему')
+                bot.send_message(message.chat.id, "Опишите Вашу проблему")
                 bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
@@ -144,7 +163,7 @@ def problem_message(message, user_nik, dep, crit, cab):
         # Проверка на дурака
         if prob[0] != '/':
             if prob == "Вернуться назад":
-                bot.send_message(message.chat.id, 'Укажите кабинет', reply_markup=backmarkup)
+                bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
             else:
                 bot.send_message(
@@ -156,20 +175,19 @@ def problem_message(message, user_nik, dep, crit, cab):
                 senddata(user_nik, dep, crit, cab, prob)
 
                 # Поиск среди чатов и отправка уведомления начальнику отдела
-                for i in range(0, len(chatids)):
-                    if dep == chatids[i][0]:
-                        if(user_nik[0] == '+'):
-                            bot.send_message(
-                                chatids[i][1],
-                                f"Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!",
-                                reply_markup=startmarkup,
-                            )
-                        else:
-                            bot.send_message(
-                                chatids[i][1],
-                                f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
-                                reply_markup=startmarkup,
-                            )
+                if chatids.get(dep) != None:
+                    if user_nik[0] == '+':
+                        bot.send_message(
+                            chatids.get(dep),
+                            f"Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!",
+                            reply_markup=startmarkup,
+                        )
+                    else:
+                        bot.send_message(
+                            chatids.get(dep),
+                            f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
+                            reply_markup=startmarkup,
+                        )
         else:
             bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте начать описание не с "/"')
             bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
@@ -183,9 +201,9 @@ def problem_message(message, user_nik, dep, crit, cab):
 
 
 if __name__ == '__main__':
-    # Проверка на наличие сетов
+    # Проверка на наличие листов
     if not departments or not criticals:
-        sys.exit("Задай сеты кнопок с отделами и важностью!")
+        sys.exit("Необходимо задать листы кнопок с отделами и важностью!")
 
     # Создаем клаву для "/start"
     startmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -213,9 +231,8 @@ if __name__ == '__main__':
     # Запуск бота
     while True:
         try:
-            bot.infinity_polling(timeout=90, long_polling_timeout = 5)
-        except RequestException as err:
-            print(err)
-            print('Разрыв коннекта до телеграмма...')
+            bot.infinity_polling(timeout=90, long_polling_timeout=5)
+        except RequestException:
+            print("Разрыв коннекта до телеграмма...")
             time.sleep(15)
-            print('Переподключение...')
+            print("Переподключение...")
