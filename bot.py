@@ -44,41 +44,57 @@ def check_worktime():
     dayhour = time.strftime("%H")
     if weekday in workdays and int(dayhour) >= int(workhours[0]) and int(dayhour) < int(workhours[1]):
         return True
-    else:
-        return False
+
+
+# Проверка начала рабочего времени (Для уведомлений)
+def check_startwork():
+    time = datetime.now()
+    nowtime = time.strftime("%H:%M")
+    if nowtime == f"{workhours[0]}:00":
+        return True
+
+
+def tray():
+    # Бесконечный цикл
+    while True:
+        # Сейчас самое начало рабочего дня (до минуты)
+        if check_worktime() and check_startwork():
+            # Отправляем всю очередь сообщений
+            notify()
+            time.sleep(60)
+        else:
+            time.sleep(30)
 
 
 # Метод для отправки скопившихся уведомлений за момент, когда было не рабочее время (Вторичный процесс)
-def notifqueue():
-    while True:
-        if check_worktime() and str(datetime.now().strftime("%H:%M")) == "8:00":
-            # Пытаемся загрузить сохранённую очередь обращений, если таковая есть
-            if notificationfile.exists():
-                notificationqueue = np.load(notificationfile, allow_pickle='TRUE').item()
-                # Есть хоть одно обращение в очереди
-                if(len(notificationqueue)) != 0:
-                    print(f"Очередь обращений загружена! {len(notificationqueue)} обращение(ий).")
-                    # Отправляем количество новых обращений по отделам
-                    for i in departments:
-                        if not notificationqueue.get(i) is None:
-                            count = notificationqueue[i]
-                            bot.send_message(chatids.get(i), f"У Вас появилось {count} новых уведомлений за вечер!", reply_markup=startmarkup)
-                    # Очищаем очередь обращений
-                    notificationqueue = {}
-                    np.save(notificationfile, notificationqueue)
-                    # Останавливаем процесс на минуту
-                    time.sleep(60)
-                # Нет обращений в очереди
-                else:
-                    # Останавливаем процесс на минуту
-                    time.sleep(60)
-            # Файлик с обращениями не создан 
-            else:
-                print("Обращений за вечер не было!")
-                time.sleep(60)
+def notify():
+    # Пытаемся загрузить сохранённую очередь обращений, если таковая есть
+    if notificationfile.exists():
+        notificationqueue = np.load(notificationfile, allow_pickle='TRUE').item()
+        # Есть хоть одно обращение в очереди
+        if (len(notificationqueue)) != 0:
+            print(f"Очередь обращений загружена! {len(notificationqueue)} обращение(ий).")
+            # Отправляем количество новых обращений по отделам
+            for i in departments:
+                if not notificationqueue.get(i) is None:
+                    count = notificationqueue[i]
+                    bot.send_message(
+                        chatids.get(i),
+                        f"Количество новых обращений в Ваш отдел в нерабочее время: {count}!",
+                        reply_markup=startmarkup,
+                    )
+                # Очищаем очередь обращений
+                notificationqueue = {}
+                np.save(notificationfile, notificationqueue)
+        # Нет обращений в очереди
         else:
-            # Останавливаем процесс на пол минуты
-            time.sleep(30)
+            # Останавливаем процесс на минуту
+            time.sleep(60)
+    # Файлик с обращениями не создан
+    else:
+        print("Обращений за вечер не было!")
+        time.sleep(60)
+
 
 # Регистрация в очередь нового обращения
 def newnotif(dep):
@@ -134,11 +150,11 @@ def start_message(message):
                     bot.register_next_step_handler(message, checknumber, user_nik)
             # Пользователь поделился контактом с нами
             else:
-                user_nik = "+" + str(message.contact.phone_number)
+                user_nik = f"+{message.contact.phone_number}"
                 # Приветствие собеседника!
                 bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
                 # Записываем номер в словарь и сохраняем
-                # bot.send_message(message.chat.id, "Мы записали Ваш номер!")
+                bot.send_message(message.chat.id, "Мы записали Ваш номер!")
                 phonedict[message.chat.id] = user_nik
                 print(f"Добавлен новый номер телефона для {message.chat.id}: {user_nik}!")
                 np.save(phonesfile, phonedict)
@@ -181,8 +197,8 @@ def newnumber(message):
     # Если пользователь прислал новый номер телефона
     if not message.contact is None:
         # Записываем номер в словарь и сохраняем
-        # bot.send_message(message.chat.id, "Ваш новый номер записан!")
-        user_nik = "+" + str(message.contact.phone_number)
+        bot.send_message(message.chat.id, "Ваш новый номер записан!")
+        user_nik = f"+{message.contact.phone_number}"
         phonedict[message.chat.id] = user_nik
         print(f"Изменён номер телефона для {message.chat.id}: {user_nik}!")
         np.save(phonesfile, phonedict)
@@ -343,7 +359,7 @@ if __name__ == '__main__':
     answerboard.add(no_button)
 
     # Демон висящих заявок
-    t = Thread(target=notifqueue, daemon=True)
+    t = Thread(target=tray, daemon=True)
     t.start()
 
     # Запуск бота
