@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 from requests.exceptions import RequestException
+from threading import Thread
 import telebot
 import numpy as np
 from tokenbot import token
@@ -31,6 +32,9 @@ chatids = {
 # Словарь с номерами телефонов
 phonesfile = Path("phones.npy")
 phonedict = {}
+# Словарь с очередью уведомлений
+notificationfile = Path("notif.npy")
+notificationqueue = {}
 
 
 # Проверка рабочего времени бота
@@ -44,70 +48,107 @@ def check_worktime():
         return False
 
 
+# Метод для отправки скопившихся уведомлений за момент, когда было не рабочее время (Вторичный процесс)
+def notifqueue():
+    while True:
+        if check_worktime() and str(datetime.now().strftime("%H:%M")) == "8:00":
+            # Пытаемся загрузить сохранённую очередь обращений, если таковая есть
+            if notificationfile.exists():
+                notificationqueue = np.load(notificationfile, allow_pickle='TRUE').item()
+                # Есть хоть одно обращение в очереди
+                if(len(notificationqueue)) != 0:
+                    print(f"Очередь обращений загружена! {len(notificationqueue)} обращение(ий).")
+                    # Отправляем количество новых обращений по отделам
+                    for i in departments:
+                        if not notificationqueue.get(i) is None:
+                            count = notificationqueue[i]
+                            bot.send_message(chatids.get(i), f"У Вас появилось {count} новых уведомлений за вечер!", reply_markup=startmarkup)
+                    # Очищаем очередь обращений
+                    notificationqueue = {}
+                    np.save(notificationfile, notificationqueue)
+                    # Останавливаем процесс на минуту
+                    time.sleep(60)
+                # Нет обращений в очереди
+                else:
+                    # Останавливаем процесс на минуту
+                    time.sleep(60)
+            # Файлик с обращениями не создан 
+            else:
+                print("Обращений за вечер не было!")
+                time.sleep(60)
+        else:
+            # Останавливаем процесс на пол минуты
+            time.sleep(30)
+
+# Регистрация в очередь нового обращения
+def newnotif(dep):
+    # Окончательное время регистрации заявки
+    time = datetime.now().strftime("%d %b %Y, %H:%M")
+    # Добавляем новое уведомление в соответсвии с отделом
+    if notificationqueue.get(dep) is None:
+        notificationqueue[dep] = 1
+    else:
+        notificationqueue[dep] += 1
+    print(f"{time}: Новое обращение добавлено в очередь!")
+    np.save(notificationfile, notificationqueue)
+
+
 @bot.message_handler(content_types=['text'])
 def start_message(message):
     # Перехват id чата для отправки уведомлений начальнику отдела
     # print(message.chat.id)
-    # Если сейчас рабочее время
-    if check_worktime():
-        # Если не пришла команда начать и пользователь без имени не поделился контактом
-        if (str(message.text) != "/start") and (message.contact is None):
-            # Если пользователь решил ввести текстом свой номер телдефона
-            if str(message.text).isdigit() or (str(message.text))[0] == '+':
-                bot.send_message(
-                    message.chat.id,
-                    "Номер вводить нет необходимости\nНажмите кнопку ниже",
-                    reply_markup=phoneboard,
-                )
-            # Если бот перезапускался или другире проблемы - возвращаем его на старт
-            else:
-                bot.send_message(
-                    message.chat.id,
-                    "Похоже Вас долого не было\nНеобходимо повторно заполнить заявку",
-                    reply_markup=startmarkup,
-                )
-            bot.register_next_step_handler(message, start_message)
-        # Если пользователь прислал сообщение текстом
+    # Если не пришла команда начать и пользователь без имени не поделился контактом
+    if (str(message.text) != "/start") and (message.contact is None):
+        # Если пользователь решил ввести текстом свой номер телдефона
+        if str(message.text).isdigit() or (str(message.text))[0] == '+':
+            bot.send_message(
+                message.chat.id,
+                "Номер вводить нет необходимости\nНажмите кнопку ниже",
+                reply_markup=phoneboard,
+            )
+        # Если бот перезапускался или другире проблемы - возвращаем его на старт
         else:
-            user_nik = str(message.from_user.username)
-            if user_nik == 'None':
-                if message.contact is None:
-                    # print("Пишет аккаунт без username")
-                    if phonedict.get(message.chat.id) is None:
-                        bot.send_message(
-                            message.chat.id,
-                            "Оставьте Ваш номер чтобы мы смогли связаться с Вами.",
-                            reply_markup=phoneboard,
-                        )
-                        bot.register_next_step_handler(message, start_message)
-                    else:
-                        user_nik = phonedict.get(message.chat.id)
-                        bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
-                        bot.send_message(message.chat.id, f'Твой номер "{user_nik}" ?', reply_markup=answerboard)
-                        bot.register_next_step_handler(message, checknumber, user_nik)
-                # Пользователь поделился контактом с нами
+            bot.send_message(
+                message.chat.id,
+                "Похоже Вас долого не было\nНеобходимо повторно заполнить заявку",
+                reply_markup=startmarkup,
+            )
+        bot.register_next_step_handler(message, start_message)
+    # Если пользователь прислал сообщение текстом
+    else:
+        user_nik = str(message.from_user.username)
+        if user_nik == 'None':
+            if message.contact is None:
+                # print("Пишет аккаунт без username")
+                if phonedict.get(message.chat.id) is None:
+                    bot.send_message(
+                        message.chat.id,
+                        "Оставьте Ваш номер чтобы мы смогли связаться с Вами.",
+                        reply_markup=phoneboard,
+                    )
+                    bot.register_next_step_handler(message, start_message)
                 else:
-                    user_nik = "+" + str(message.contact.phone_number)
-                    # Приветствие собеседника!
+                    user_nik = phonedict.get(message.chat.id)
                     bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
-                    # Записываем номер в словарь и сохраняем
-                    # bot.send_message(message.chat.id, "Мы записали Ваш номер!")
-                    phonedict[message.chat.id] = user_nik
-                    print(f"Добавлен новый номер телефона для {message.chat.id}: {user_nik}!")
-                    np.save('phones.npy', phonedict)
-                    bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
-                    bot.register_next_step_handler(message, critical_switch, user_nik)
+                    bot.send_message(message.chat.id, f'Твой номер "{user_nik}" ?', reply_markup=answerboard)
+                    bot.register_next_step_handler(message, checknumber, user_nik)
+            # Пользователь поделился контактом с нами
             else:
+                user_nik = "+" + str(message.contact.phone_number)
                 # Приветствие собеседника!
                 bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
+                # Записываем номер в словарь и сохраняем
+                # bot.send_message(message.chat.id, "Мы записали Ваш номер!")
+                phonedict[message.chat.id] = user_nik
+                print(f"Добавлен новый номер телефона для {message.chat.id}: {user_nik}!")
+                np.save(phonesfile, phonedict)
                 bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
                 bot.register_next_step_handler(message, critical_switch, user_nik)
-    else:
-        bot.send_message(
-            message.chat.id,
-            "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)",
-            reply_markup=startmarkup,
-        )
+        else:
+            # Приветствие собеседника!
+            bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
+            bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
+            bot.register_next_step_handler(message, critical_switch, user_nik)
 
 
 # Проверка номера
@@ -144,7 +185,7 @@ def newnumber(message):
         user_nik = "+" + str(message.contact.phone_number)
         phonedict[message.chat.id] = user_nik
         print(f"Изменён номер телефона для {message.chat.id}: {user_nik}!")
-        np.save('phones.npy', phonedict)
+        np.save(phonesfile, phonedict)
         # Возвращаемся к выбору отдела
         bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
         bot.register_next_step_handler(message, critical_switch, user_nik)
@@ -155,131 +196,110 @@ def newnumber(message):
 
 
 def critical_switch(message, user_nik):
-    if check_worktime():
-        dep = str(message.text)
-        # Проверка на дурака
-        if dep in departments:
-            bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
-            bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
-        else:
-            bot.send_message(message.chat.id, "Выберите из списка!", reply_markup=depmarkup)
-            bot.register_next_step_handler(message, critical_switch, user_nik)
+    dep = str(message.text)
+    # Проверка на дурака
+    if dep in departments:
+        bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
+        bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
     else:
-        bot.send_message(
-            message.chat.id,
-            "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)",
-            reply_markup=startmarkup,
-        )
-        bot.register_next_step_handler(message, start_message)
+        bot.send_message(message.chat.id, "Выберите из списка!", reply_markup=depmarkup)
+        bot.register_next_step_handler(message, critical_switch, user_nik)
 
 
 def cabinet_input(message, user_nik, dep):
-    if check_worktime():
-        crit = str(message.text)
-        # Проверка на дурака
-        if crit in criticals:
-            if crit == "Вернуться назад":
-                bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
-                bot.register_next_step_handler(message, critical_switch, user_nik)
-            else:
-                bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
-                bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+    crit = str(message.text)
+    # Проверка на дурака
+    if crit in criticals:
+        if crit == "Вернуться назад":
+            bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
+            bot.register_next_step_handler(message, critical_switch, user_nik)
         else:
-            bot.send_message(message.chat.id, "Выберите из списка!", reply_markup=critmarkup)
-            bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
+            bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
+            bot.register_next_step_handler(message, problem, user_nik, dep, crit)
     else:
-        bot.send_message(
-            message.chat.id,
-            "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)",
-            reply_markup=startmarkup,
-        )
-        bot.register_next_step_handler(message, start_message)
+        bot.send_message(message.chat.id, "Выберите из списка!", reply_markup=critmarkup)
+        bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
 
 
 def problem(message, user_nik, dep, crit):
-    if check_worktime():
-        cab = str(message.text)
-        # Проверка на дурака
-        if cab[0] != '/':
-            # Проверка на наличие медиа-контента
-            if cab == "None":
-                bot.send_message(
-                    message.chat.id,
-                    "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...",
-                )
-                bot.register_next_step_handler(message, problem, user_nik, dep, crit)
-            elif cab == "Вернуться назад":
-                bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
-                bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
-            else:
-                bot.send_message(message.chat.id, "Опишите Вашу проблему")
-                bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
-        else:
-            bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
+    cab = str(message.text)
+    # Проверка на дурака
+    if cab[0] != '/':
+        # Проверка на наличие медиа-контента
+        if cab == "None":
+            bot.send_message(
+                message.chat.id,
+                "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте указать кабинет текстом...",
+            )
             bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+        elif cab == "Вернуться назад":
+            bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
+            bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
+        else:
+            bot.send_message(message.chat.id, "Опишите Вашу проблему")
+            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
     else:
-        bot.send_message(
-            message.chat.id,
-            "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)",
-            reply_markup=startmarkup,
-        )
-        bot.register_next_step_handler(message, start_message)
+        bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте указать кабинет без "/"')
+        bot.register_next_step_handler(message, problem, user_nik, dep, crit)
 
 
 def problem_message(message, user_nik, dep, crit, cab):
-    if check_worktime():
-        prob = str(message.text)
-        # Проверка на дурака
-        if prob[0] != '/':
-            # Проверка на наличие медиа-контента
-            if prob == "None":
-                bot.send_message(
-                    message.chat.id,
-                    "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...",
-                    reply_markup=backmarkup,
-                )
-                bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
-            elif prob == "Вернуться назад":
-                bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
-                bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+    prob = str(message.text)
+    # Проверка на дурака
+    if prob[0] != '/':
+        # Проверка на наличие медиа-контента
+        if prob == "None":
+            bot.send_message(
+                message.chat.id,
+                "Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте описать проблему текстом...",
+                reply_markup=backmarkup,
+            )
+            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
+        elif prob == "Вернуться назад":
+            bot.send_message(message.chat.id, "Укажите кабинет", reply_markup=backmarkup)
+            bot.register_next_step_handler(message, problem, user_nik, dep, crit)
+        # Если проблема соответствует проблеме (не команда, не вернуться назад и не медиа-контент)
+        else:
+            # Делаем, чтобы в гугл таблице была ссылка для связи на ТГ
+            if user_nik[0] != '+':
+                tgurl = "https://t.me/" + user_nik
+                senddata(tgurl, dep, crit, cab, prob)
+            # Если человек обращается с номером телефона
             else:
+                # Вызываем метод передачи данных в Гугл таблицы
+                senddata(user_nik, dep, crit, cab, prob)
+            if check_worktime():
                 bot.send_message(
                     message.chat.id,
-                    'Спасибо за обращение, информация передана! Чтобы зарегистрировать новое обращение - нажмите "/start"',
+                    'Спасибо за обращение, информация передана!\nЧтобы зарегистрировать новое обращение - нажмите "/start"',
                     reply_markup=startmarkup,
                 )
-                # Делаем, чтобы в гугл таблице была ссылка для связи на ТГ
-                if user_nik[0] != '+':
-                    tgurl = "https://t.me/" + user_nik
-                    senddata(tgurl, dep, crit, cab, prob)
-                # Если человек обращается с номером телефона
-                else:
-                    # Вызываем метод передачи данных в Гугл таблицы
-                    senddata(user_nik, dep, crit, cab, prob)
                 # Поиск среди чатов и отправка уведомления начальнику отдела
-                if not chatids.get(dep) is None:
-                    if user_nik[0] == '+':
-                        bot.send_message(
-                            chatids.get(dep),
-                            f"Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!",
-                            reply_markup=startmarkup,
-                        )
-                    else:
-                        bot.send_message(
-                            chatids.get(dep),
-                            f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
-                            reply_markup=startmarkup,
-                        )
-        else:
-            bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте начать описание не с "/"')
-            bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
+                if user_nik[0] == '+':
+                    bot.send_message(
+                        chatids.get(dep),
+                        f"Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!",
+                        reply_markup=startmarkup,
+                    )
+                else:
+                    bot.send_message(
+                        chatids.get(dep),
+                        f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
+                        reply_markup=startmarkup,
+                    )
+            # Не рабочее время (Заявки ставятся в очередь)
+            else:
+                newnotif(dep)
+                bot.send_message(
+                    message.chat.id,
+                    'Спасибо за обращение!\nС Вами свяжутся в рабочее время!\nЧтобы зарегистрировать новое обращение - нажмите "/start"',
+                    reply_markup=startmarkup,
+                )
+
+    # Пользователь прислал команду вместо описания проблемы
     else:
-        bot.send_message(
-            message.chat.id,
-            "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)",
-            reply_markup=startmarkup,
-        )
-        bot.register_next_step_handler(message, start_message)
+        bot.send_message(message.chat.id, 'Недопустимая команда, попробуйте начать описание не с "/"')
+        bot.register_next_step_handler(message, problem_message, user_nik, dep, crit, cab)
 
 
 if __name__ == '__main__':
@@ -289,7 +309,7 @@ if __name__ == '__main__':
 
     # Пытаемся загрузить сохранённые телефоны из книги номеров при запуске бота, если таковое есть
     if phonesfile.exists():
-        phonedict = np.load('phones.npy', allow_pickle='TRUE').item()
+        phonedict = np.load(phonesfile, allow_pickle='TRUE').item()
         print(f"Телефонная книга с сохранёнными номерами успешно загружена! {len(phonedict)} номер(ов).")
     else:
         print("Телефонная книга с сохранёнными номерами пустая!")
@@ -321,6 +341,10 @@ if __name__ == '__main__':
     no_button = telebot.types.KeyboardButton("Нет")
     answerboard.add(yes_button)
     answerboard.add(no_button)
+
+    # Демон висящих заявок
+    t = Thread(target=notifqueue, daemon=True)
+    t.start()
 
     # Запуск бота
     while True:
