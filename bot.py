@@ -1,10 +1,12 @@
 import sys
-import telebot
 import time
-from tokenbot import token
-from gsheets import senddata
+from pathlib import Path
 from datetime import datetime
 from requests.exceptions import RequestException
+import telebot
+import numpy as np
+from tokenbot import token
+from gsheets import senddata
 
 # Задаем токен для телебота и игнорируем висячие сообщения
 bot = telebot.TeleBot(token, skip_pending=True)
@@ -26,13 +28,17 @@ chatids = {
     "Завхоз": 5162642969,
 }
 
+# Словарь с номерами телефонов
+phonesfile = Path("phones.npy")
+phonedict = {}
+
 
 # Проверка рабочего времени бота
 def check_worktime():
     time = datetime.now()
     weekday = time.strftime("%a")
     dayhour = time.strftime("%H")
-    if weekday in workdays and int(dayhour) > int(workhours[0]) and int(dayhour) < int(workhours[1]):
+    if weekday in workdays and int(dayhour) >= int(workhours[0]) and int(dayhour) < int(workhours[1]):
         return True
     else:
         return False
@@ -41,7 +47,7 @@ def check_worktime():
 @bot.message_handler(content_types=['text'])
 def start_message(message):
     # Перехват id чата для отправки уведомлений начальнику отдела
-    print(message.chat.id)
+    # print(message.chat.id)
     # Если сейчас рабочее время
     if check_worktime():
         # Если не пришла команда начать и пользователь без имени не поделился контактом
@@ -67,16 +73,28 @@ def start_message(message):
             if user_nik == 'None':
                 if message.contact is None:
                     # print("Пишет аккаунт без username")
-                    bot.send_message(
-                        message.chat.id,
-                        "Оставьте Ваш номер чтобы мы смогли связаться с Вами.",
-                        reply_markup=phoneboard,
-                    )
-                    bot.register_next_step_handler(message, start_message)
+                    if phonedict.get(message.chat.id) is None:
+                        bot.send_message(
+                            message.chat.id,
+                            "Оставьте Ваш номер чтобы мы смогли связаться с Вами.",
+                            reply_markup=phoneboard,
+                        )
+                        bot.register_next_step_handler(message, start_message)
+                    else:
+                        user_nik = phonedict.get(message.chat.id)
+                        bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
+                        bot.send_message(message.chat.id, f'Твой номер "{user_nik}" ?', reply_markup=answerboard)
+                        bot.register_next_step_handler(message, checknumber, user_nik)
+                # Пользователь поделился контактом с нами
                 else:
                     user_nik = "+" + str(message.contact.phone_number)
                     # Приветствие собеседника!
                     bot.send_message(message.chat.id, f"Здравствуйте, {message.chat.first_name}!")
+                    # Записываем номер в словарь и сохраняем
+                    # bot.send_message(message.chat.id, "Мы записали Ваш номер!")
+                    phonedict[message.chat.id] = user_nik
+                    print(f"Добавлен новый номер телефона для {message.chat.id}: {user_nik}!")
+                    np.save('phones.npy', phonedict)
                     bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
                     bot.register_next_step_handler(message, critical_switch, user_nik)
             else:
@@ -90,6 +108,50 @@ def start_message(message):
             "Заявки принимаются только в рабочее время!\n(Пн-Пт с 8:00 до 20:00)",
             reply_markup=startmarkup,
         )
+
+
+# Проверка номера
+def checknumber(message, user_nik):
+    answer = str(message.text)
+    # Если пользователь прислал медиа-контент
+    if answer == "None":
+        bot.send_message(
+            message.chat.id,
+            'Мы пока не научили бота обрабатывать заявки с медиа-контентом =(\nПопробуйте ответить "Да" или "Нет"...',
+            reply_markup=answerboard,
+        )
+        bot.register_next_step_handler(message, checknumber, user_nik)
+    # Если пользователь подтвердил свой номер телефона
+    elif answer == "Да":
+        bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
+        bot.register_next_step_handler(message, critical_switch, user_nik)
+    # Если пользователь пишет, что номер ошибочный
+    elif answer == "Нет":
+        bot.send_message(message.chat.id, "Поделитесь Вашим номером!", reply_markup=phoneboard)
+        bot.register_next_step_handler(message, newnumber)
+    # Если пользователь написал что-то текстом
+    else:
+        bot.send_message(message.chat.id, 'Попробуйте ответить "Да" или "Нет"', reply_markup=answerboard)
+        bot.register_next_step_handler(message, checknumber, user_nik)
+
+
+# Сохранение нового номера
+def newnumber(message):
+    # Если пользователь прислал новый номер телефона
+    if not message.contact is None:
+        # Записываем номер в словарь и сохраняем
+        # bot.send_message(message.chat.id, "Ваш новый номер записан!")
+        user_nik = "+" + str(message.contact.phone_number)
+        phonedict[message.chat.id] = user_nik
+        print(f"Изменён номер телефона для {message.chat.id}: {user_nik}!")
+        np.save('phones.npy', phonedict)
+        # Возвращаемся к выбору отдела
+        bot.send_message(message.chat.id, "Выберите к кому хотите обратиться", reply_markup=depmarkup)
+        bot.register_next_step_handler(message, critical_switch, user_nik)
+    # Во всех других случая просим его снова поделиться номером
+    else:
+        bot.send_message(message.chat.id, 'Требуется нажать кнопку "Поделиться номером"!', reply_markup=phoneboard)
+        bot.register_next_step_handler(message, newnumber)
 
 
 def critical_switch(message, user_nik):
@@ -147,7 +209,7 @@ def problem(message, user_nik, dep, crit):
                 )
                 bot.register_next_step_handler(message, problem, user_nik, dep, crit)
             elif cab == "Вернуться назад":
-                bot.send_message(message.chat.id, 'Укажите приоритетность вашего обращения', reply_markup=critmarkup)
+                bot.send_message(message.chat.id, "Укажите приоритетность вашего обращения", reply_markup=critmarkup)
                 bot.register_next_step_handler(message, cabinet_input, user_nik, dep)
             else:
                 bot.send_message(message.chat.id, "Опишите Вашу проблему")
@@ -190,7 +252,7 @@ def problem_message(message, user_nik, dep, crit, cab):
                 senddata(user_nik, dep, crit, cab, prob)
 
                 # Поиск среди чатов и отправка уведомления начальнику отдела
-                if chatids.get(dep) != None:
+                if not chatids.get(dep) is None:
                     if user_nik[0] == '+':
                         bot.send_message(
                             chatids.get(dep),
@@ -220,6 +282,12 @@ if __name__ == '__main__':
     if not departments or not criticals:
         sys.exit("Необходимо задать листы кнопок с отделами и важностью!")
 
+    # Пытаемся загрузить сохранённые телефоны из книги номеров при запуске бота, если таковое есть
+    if phonesfile.exists():
+        phonedict = np.load('phones.npy', allow_pickle='TRUE').item()
+        print(f"Телефонная книга с сохранёнными номерами успешно загружена! {len(phonedict)} номер(ов).")
+    else:
+        print("Телефонная книга с сохранёнными номерами пустая!")
     # Создаем клаву для "/start"
     startmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     startbtn = telebot.types.KeyboardButton("/start")
@@ -242,6 +310,12 @@ if __name__ == '__main__':
     phoneboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     ph_button = telebot.types.KeyboardButton(text="Поделиться номером", request_contact=True)
     phoneboard.add(ph_button)
+    # Кнопки "Да" или "Нет"
+    answerboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    yes_button = telebot.types.KeyboardButton("Да")
+    no_button = telebot.types.KeyboardButton("Нет")
+    answerboard.add(yes_button)
+    answerboard.add(no_button)
 
     # Запуск бота
     while True:
