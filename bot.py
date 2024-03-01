@@ -248,9 +248,14 @@ def problem_message(message, user_nik, dep, crit, cab):
                     'Спасибо за обращение, информация передана! Чтобы зарегистрировать новое обращение - нажмите "/start"',
                     reply_markup=startmarkup,
                 )
-                # Вызываем метод передачи данных в Гугл таблицы
-                senddata(user_nik, dep, crit, cab, prob)
-
+                # Делаем, чтобы в гугл таблице была ссылка для связи на ТГ
+                if user_nik[0] != '+':
+                    tgurl = "https://t.me/" + user_nik
+                    senddata(tgurl, dep, crit, cab, prob)
+                # Если человек обращается с номером телефона
+                else:
+                    # Вызываем метод передачи данных в Гугл таблицы
+                    senddata(user_nik, dep, crit, cab, prob)
                 # Поиск среди чатов и отправка уведомления начальнику отдела
                 if not chatids.get(dep) is None:
                     if user_nik[0] == '+':
