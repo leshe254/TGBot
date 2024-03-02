@@ -15,8 +15,6 @@ bot = telebot.TeleBot(token, skip_pending=True)
 # Листы с отделами и критичностью задач
 departments = ["Администрация", "Администрация эл. журнала", "IT отдел", "Завхоз"]
 criticals = ["Жизненно-необходимо", "Средняя важность", "В свободное время", "Вернуться назад"]
-# Параметры, которые передаются дальше
-datalist = ['От кого', 'в какой отдел', 'Критичность', 'Кабинет', 'Проблема']
 # Режим работы
 workdays = {'Mon', 'Tue', 'Wed', 'Thu', 'Fri'}
 workhours = ['8', '20']
@@ -50,7 +48,12 @@ def check_worktime():
 def check_startwork():
     time = datetime.now()
     nowtime = time.strftime("%H:%M")
-    if nowtime == f"{workhours[0]}:00":
+    notiftime = ""
+    if int(workhours[0]) < 10:
+        notiftime = f"0{workhours[0]}:00"
+    else:
+        notiftime = f"{workhours[0]}:00"
+    if nowtime == notiftime:
         return True
 
 
@@ -68,32 +71,32 @@ def tray():
 
 # Метод для отправки скопившихся уведомлений за момент, когда было не рабочее время (Вторичный процесс)
 def notify():
+    print("Проверка очереди уведомлений...")
     # Пытаемся загрузить сохранённую очередь обращений, если таковая есть
     if notificationfile.exists():
         notificationqueue = np.load(notificationfile, allow_pickle='TRUE').item()
+        print(notificationqueue)
         # Есть хоть одно обращение в очереди
-        if (len(notificationqueue)) != 0:
+        if len(notificationqueue) != 0:
             print(f"Очередь обращений загружена! {len(notificationqueue)} обращение(ий).")
             # Отправляем количество новых обращений по отделам
-            for i in departments:
+            for i in notificationqueue:
                 if not notificationqueue.get(i) is None:
-                    count = notificationqueue[i]
+                    print("В очереди есть несколько уведомлений!")
+                    count = notificationqueue.get(i)
                     bot.send_message(
                         chatids.get(i),
                         f"Количество новых обращений в Ваш отдел в нерабочее время: {count}!",
                         reply_markup=startmarkup,
                     )
-                # Очищаем очередь обращений
-                notificationqueue = {}
-                np.save(notificationfile, notificationqueue)
-        # Нет обращений в очереди
-        else:
-            # Останавливаем процесс на минуту
-            time.sleep(60)
+                else:
+                    print("Обращений за вечер не было!")
+            # Очищаем очередь обращений
+            notificationqueue = {}
+            np.save(notificationfile, notificationqueue)
     # Файлик с обращениями не создан
     else:
         print("Обращений за вечер не было!")
-        time.sleep(60)
 
 
 # Регистрация в очередь нового обращения
@@ -357,6 +360,10 @@ if __name__ == '__main__':
     no_button = telebot.types.KeyboardButton("Нет")
     answerboard.add(yes_button)
     answerboard.add(no_button)
+
+    #В случае если бот не работал или по какой-то причине не были отправлены уведомления в начале рабочего дня
+    if check_worktime():
+        notify()
 
     # Демон висящих заявок
     t = Thread(target=tray, daemon=True)
