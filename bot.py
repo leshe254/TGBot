@@ -370,10 +370,4 @@ if __name__ == '__main__':
     t.start()
 
     # Запуск бота
-    while True:
-        try:
-            bot.infinity_polling(timeout=90, long_polling_timeout=5)
-        except RequestException:
-            print("Разрыв коннекта до телеграмма...")
-            time.sleep(15)
-            print("Переподключение...")
+    bot.infinity_polling(none_stop = True, timeout=90, long_polling_timeout=5)
