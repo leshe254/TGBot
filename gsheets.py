@@ -23,13 +23,3 @@ def senddata(user_nik, dep, crit, cab, prob):
         sh = gc.open_by_url(sheets.get(dep)).get_worksheet(0)
         sh.append_row([time, user_nik, cab, crit, prob], value_input_option='RAW', insert_data_option=None)
         print(f"{time}: Оставлена новая заявка в отдел {dep}!")
-
-# Проверка выполненности заданий
-def checktasks():
-    ongoingtasks = {}
-    # Для каждого отдела открываем таски
-    for i in sheets:
-        sh = gc.open_by_url(sheets.get(i[0])).get_worksheet(0)
-        # Построчно проверяем на выполненность заданий, невыполненные возвращаем словарём {номер строки, user_nik}
-
-    return ongoingtasks

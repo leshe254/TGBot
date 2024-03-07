@@ -1,13 +1,13 @@
 import sys
 import time
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 from requests.exceptions import RequestException
 from threading import Thread
 import telebot
 import numpy as np
 from tokenbot import token
-from gsheets import senddata, checktasks
+from gsheets import senddata
 
 # Задаем токен для телебота и игнорируем висячие сообщения
 bot = telebot.TeleBot(token, skip_pending=True)
@@ -30,37 +30,33 @@ chatids = {
 # Словарь с номерами телефонов
 phonesfile = Path("phones.npy")
 phonedict = {}
-
-# Словарь с никами и чат id
-userfile = Path("users.npy")
-users = {}
-
 # Словарь с очередью уведомлений
 notificationfile = Path("notif.npy")
 notificationqueue = {}
-
-# Словарь с очередью заявкой
-orderfile = Path("order.npy")
-orderqueue = {}
-
 
 
 # Проверка рабочего времени бота
 def check_worktime():
     time = datetime.now()
     weekday = time.strftime("%a")
-    if weekday in workdays and time.hour >= workhours[0] and time.hour <= workhours[1]:
+    dayhour = time.strftime("%H")
+    if weekday in workdays and int(dayhour) >= int(workhours[0]) and int(dayhour) < int(workhours[1]):
         return True
 
 
 # Проверка начала рабочего времени (Для уведомлений)
 def check_startwork():
     time = datetime.now()
-    # Проверить, если сейчас ровно 8:00
-    if time.hour == workhours[0] and time.second == 0:
+    nowtime = time.strftime("%H:%M")
+    notiftime = ""
+    if int(workhours[0]) < 10:
+        notiftime = f"0{workhours[0]}:00"
+    else:
+        notiftime = f"{workhours[0]}:00"
+    if nowtime == notiftime:
         return True
 
-# Демон уведомлений о новых заявках
+
 def tray():
     # Бесконечный цикл
     while True:
@@ -72,36 +68,21 @@ def tray():
         else:
             time.sleep(30)
 
-# Демон проверки выполнения заявок
-def tasks():
-    # Бесконечный цикл
-    while True:
-        # Если время в промежутке от 7:45 до 8:00
-        # if datetime.time(int(workhours[0])-1, 45) <= datetime.now() <= datetime.time(int(workhours[0]), 0):
-            # Собираем невыполненные заявки, ставим их в очередь (записываем в файлик)
-            # print()
-        # else:
-            # print()
-            # Каждые 15 минут собираем невыполненные заявки, записываем их в словарь
-            # Каждые 15 минут собирается 2 словаь, чтобы потом найти заявку, которая была выполнена в течении этих 15 минут, такие заявки собираются в отдельный словарь
-            # После сборки выполненных заявок - отправляем уведомление создателю - типо заявка выполнена
-        time.sleep(15*60)
 
-        
-
-# Метод для отправки скопившихся уведомлений за момент, когда было не рабочее время и невыполненных задач (Вторичный процесс)
+# Метод для отправки скопившихся уведомлений за момент, когда было не рабочее время (Вторичный процесс)
 def notify():
     print("Проверка очереди уведомлений...")
-
     # Пытаемся загрузить сохранённую очередь обращений, если таковая есть
     if notificationfile.exists():
         notificationqueue = np.load(notificationfile, allow_pickle='TRUE').item()
+        print(notificationqueue)
         # Есть хоть одно обращение в очереди
         if len(notificationqueue) != 0:
             print(f"Очередь обращений загружена! {len(notificationqueue)} обращение(ий).")
             # Отправляем количество новых обращений по отделам
             for i in notificationqueue:
                 if not notificationqueue.get(i) is None:
+                    print("В очереди есть несколько уведомлений!")
                     count = notificationqueue.get(i)
                     bot.send_message(
                         chatids.get(i),
@@ -116,35 +97,6 @@ def notify():
     # Файлик с обращениями не создан
     else:
         print("Обращений за вечер не было!")
-
-    # Пытаемся загрузить сохранённую очередь невыполненных обращений
-    if orderfile.exists():
-        orderqueue = np.load(orderfile, allow_pickle='TRUE').item()
-        # Есть хоть одно обращение в очереди
-        if len(orderqueue) != 0:
-            print(f"Очередь невыполненных обращений загружена! {len(orderqueue)} обращение(ий).")
-            # Отправляем количество новых обращений по отделам
-            for i in orderqueue:
-                if not orderqueue.get(i) is None:
-                    count = orderqueue.get(i)
-                    if count == 1:
-                        bot.send_message(
-                            i[0],
-                            f"Мы помним о Вас, Ваша заявка находится в работе!",
-                            reply_markup=startmarkup,
-                            )
-                    else:
-                        bot.send_message(
-                            i[0],
-                            f"Мы помним о Вас, Мы ещё занимаемся Вашими заявками!",
-                            reply_markup=startmarkup,
-                            )
-                else:
-                    print("Невыполненных обращений нет!")
-    # Файлик с невыполненными обращениями не создан
-    else:
-        print("Невыполненных обращений нет!")
-
 
 
 # Регистрация в очередь нового обращения
@@ -349,12 +301,6 @@ def problem_message(message, user_nik, dep, crit, cab):
                         reply_markup=startmarkup,
                     )
                 else:
-                    # Если пользователя нет в списке списке человек
-                    if users.get(user_nik) is None:
-                        users[message.chat.id] = user_nik
-                        # Сохраняем нового юзера в список юзеров
-                        np.save(userfile, users)
-
                     bot.send_message(
                         chatids.get(dep),
                         f"Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!",
@@ -386,41 +332,28 @@ if __name__ == '__main__':
         print(f"Телефонная книга с сохранёнными номерами успешно загружена! {len(phonedict)} номер(ов).")
     else:
         print("Телефонная книга с сохранёнными номерами пустая!")
-
-    # Пытаемся загрузить сохранённые имена пользователей и id чатов, если есть
-    if userfile.exists():
-        users = np.load(userfile, allow_pickle='TRUE').item()
-        print(f"Сохраненные имена пользователей загружены! {len(users)} чел.")
-    else:
-        print("Отсутствуют сохраненные имена пользователей!")
-
     # Создаем клаву для "/start"
     startmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     startbtn = telebot.types.KeyboardButton("/start")
     startmarkup.add(startbtn)
-
     # Создаем клавиатуру для выбора отдела
     depmarkup = telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     for department in departments:
         itemtmp = telebot.telebot.types.KeyboardButton(department)
         depmarkup.add(itemtmp)
-
     # Создаем клавиатуру для выбора критичности
     critmarkup = telebot.telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     for critical in criticals:
         itemtmp = telebot.telebot.types.KeyboardButton(critical)
         critmarkup.add(itemtmp)
-
     # Создаем ккнопку назад
     backmarkup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     backbtn = telebot.types.KeyboardButton("Вернуться назад")
     backmarkup.add(backbtn)
-
     # Кнопка отправки номера
     phoneboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     ph_button = telebot.types.KeyboardButton(text="Поделиться номером", request_contact=True)
     phoneboard.add(ph_button)
-
     # Кнопки "Да" или "Нет"
     answerboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     yes_button = telebot.types.KeyboardButton("Да")
@@ -435,9 +368,6 @@ if __name__ == '__main__':
     # Демон висящих заявок
     t = Thread(target=tray, daemon=True)
     t.start()
-
-    # Демон проверки невыполненных и выполненных задач
-
 
     # Запуск бота
     bot.infinity_polling(none_stop = True, timeout=90, long_polling_timeout=5)
