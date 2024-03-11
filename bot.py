@@ -273,9 +273,12 @@ def problem_message(message, user_nik, dep, cab):
                 )
                 # Поиск среди чатов и отправка уведомления начальнику отдела
                 if user_nik[0] == '+':
+                    mess = telebot.types.InlineKeyboardMarkup()
+                    button1 = telebot.types.InlineKeyboardButton("Написать", url=f"https://t.me/{user_nik}")
+                    mess.add(button1)
                     bot.send_message(
                         chatids.get(dep),
-                        f'Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!',
+                        f'Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!', reply_markup=mess
                     )
                 else:
                     bot.send_message(
