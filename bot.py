@@ -105,10 +105,6 @@ def newnotif(dep):
 
 @bot.message_handler(content_types=['text'])
 def start_message(message):
-    for i in chatids:
-        if chatids.get(i) == message.chat.id:
-            startmarkup = quickanswerboard
-            break
     # Перехват id чата для отправки уведомлений начальнику отдела
     # print(message.chat.id)
     # Если не пришла команда начать и пользователь без имени не поделился контактом
@@ -128,10 +124,6 @@ def start_message(message):
                 reply_markup=startmarkup,
             )
         bot.register_next_step_handler(message, start_message)
-    # Реагирование на ответ
-    elif str(message.text) == "Ответить":
-        bot.send_message(message.chat.id, 'Введите id для ответа!', reply_markup=backmarkup)
-        bot.register_next_step_handler(message, id_answer)
     # Если пользователь прислал сообщение текстом
     else:
         user_nik = str(message.from_user.username)
@@ -212,33 +204,6 @@ def newnumber(message):
         bot.send_message(message.chat.id, 'Требуется нажать кнопку "Поделиться номером"!', reply_markup=phoneboard)
         bot.register_next_step_handler(message, newnumber)
 
-# Сбор данных для ответа
-def id_answer(message):
-    ansid = str(message.text)
-    # Пользователь нажал ответить и прислал id чата
-    if ansid != "Вернуться назад":
-        bot.send_message(message.chat.id, 'Введите ответ для обращения!', reply_markup=backmarkup)
-        bot.register_next_step_handler(message, send_answer, ansid)
-    # Пользователь выбрал ответить, но нажал кнопку назад
-    else:
-        bot.send_message(message.chat.id, 'Вы можете прислать ответ пользователю позже!', reply_markup=backmarkup)
-        bot.register_next_step_handler(message, start_message)
-
-# Ответ на обращение
-def send_answer(message, ansid):
-    anstext = str(message.text)
-    # Пользватель нажал ответить, прислал id и ввел текст
-    if anstext != "Вернуться назад":
-        # Отправляем сообщение собеседнику
-        bot.send_message(ansid, f'Вам поступил ответ на Ваше обращение:\n{anstext}', reply_markup=startmarkup)
-        bot.send_message(message.chat.id, 'Ответ на обращение отправлен!', reply_markup=startmarkup)
-        bot.register_next_step_handler(message, start_message)
-    # Пользователь нажал ответить, прислал id и потом нажал назад, возвращаем его на ввод id
-    else:
-        bot.send_message(message.chat.id, 'Напишите "Ответить" если хотите ответить на обращение!', reply_markup=startmarkup)
-        bot.register_next_step_handler(message, start_message)
-
-
 def cabinet_input(message, user_nik):
     dep = str(message.text)
     # Проверка на дурака
@@ -310,12 +275,12 @@ def problem_message(message, user_nik, dep, cab):
                 if user_nik[0] == '+':
                     bot.send_message(
                         chatids.get(dep),
-                        f'Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!\nДля ответа нажмите "Ответить"\n(id для ответа: {message.chat.id})',
+                        f'Вам поступило новое обращение от {user_nik}\n{prob} в {cab}!',
                     )
                 else:
                     bot.send_message(
                         chatids.get(dep),
-                        f'Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!\nДля ответа нажмите "Ответить"\n(id для ответа: {message.chat.id})',
+                        f'Вам поступило новое обращение от @{user_nik}\n{prob} в {cab}!',
                     )
             # Не рабочее время (Заявки ставятся в очередь)
             else:
@@ -370,12 +335,6 @@ if __name__ == '__main__':
     no_button = telebot.types.KeyboardButton("Нет")
     answerboard.add(yes_button)
     answerboard.add(no_button)
-
-    # Кнопки старт и "Ответить"
-    quickanswerboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    ansbtn = telebot.types.KeyboardButton("Ответить")
-    quickanswerboard.add(startbtn)
-    quickanswerboard.add(ansbtn)
 
     # В случае если бот не работал или по какой-то причине не были отправлены уведомления в начале рабочего дня
     if check_worktime():
